@@ -15,9 +15,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import ReactMarkdown from "react-markdown"
-import { generateAllCodeFormats } from "@/lib/code-generator"
-import { toast } from "sonner"
-import { CheckCircle2, Loader2 } from "lucide-react"
 import type { GeneratedSchema } from "@/app/page"
 
 interface ExportPanelProps {
@@ -29,33 +26,30 @@ interface ExportPanelProps {
 export default function ExportPanel({ schema, onSchemaChange, projectId }: ExportPanelProps) {
   const [explanation, setExplanation] = useState<string>("")
   const [isExplaining, setIsExplaining] = useState(false)
-  const [message, setMessage] = useState("")
-  const [chat, setChat] = useState<{ role: "user" | "assistant"; content: string }[]>([])
-  const [isSending, setIsSending] = useState(false)
-  const [pendingSchema, setPendingSchema] = useState<GeneratedSchema | null>(null)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const listRef = useRef<HTMLDivElement | null>(null)
+  const [qaMessage, setQaMessage] = useState("")
+  const [qaChat, setQaChat] = useState<{ role: "user" | "assistant"; content: string }[]>([])
+  const [isSendingQA, setIsSendingQA] = useState(false)
+  const qaListRef = useRef<HTMLDivElement | null>(null)
 
   const canEdit = typeof onSchemaChange === "function"
 
   // Helper functions for localStorage chat persistence
-  const getChatStorageKey = (timestamp: string) => `schema-chat-${timestamp}`
+  const getQAChatStorageKey = (timestamp: string) => `schema-qa-chat-${timestamp}`
   
-  const loadChatFromStorage = (timestamp: string): { role: "user" | "assistant"; content: string }[] => {
+  const loadQAChatFromStorage = (timestamp: string): { role: "user" | "assistant"; content: string }[] => {
     if (typeof window === "undefined") return []
     try {
-      const stored = localStorage.getItem(getChatStorageKey(timestamp))
+      const stored = localStorage.getItem(getQAChatStorageKey(timestamp))
       return stored ? JSON.parse(stored) : []
     } catch {
       return []
     }
   }
   
-  const saveChatToStorage = (timestamp: string, chatHistory: { role: "user" | "assistant"; content: string }[]) => {
+  const saveQAChatToStorage = (timestamp: string, chatHistory: { role: "user" | "assistant"; content: string }[]) => {
     if (typeof window === "undefined") return
     try {
-      localStorage.setItem(getChatStorageKey(timestamp), JSON.stringify(chatHistory))
+      localStorage.setItem(getQAChatStorageKey(timestamp), JSON.stringify(chatHistory))
     } catch {
       // Ignore storage errors
     }
@@ -64,12 +58,12 @@ export default function ExportPanel({ schema, onSchemaChange, projectId }: Expor
   // Track if we've fetched explanation for a timestamp (stored in localStorage)
   const getExplanationFetchedKey = (timestamp: string) => `explanation-fetched-${timestamp}`
   
-  // Load explanation and chat when schema timestamp changes (new schema)
+  // Load explanation and Q&A chat when schema timestamp changes (new schema)
   useEffect(() => {
     if (!schema) {
       setExplanation("")
       setIsExplaining(false)
-      setChat([])
+      setQaChat([])
       return
     }
     
@@ -114,12 +108,12 @@ export default function ExportPanel({ schema, onSchemaChange, projectId }: Expor
       }
     }
     
-    // Always restore chat history from localStorage for this schema
-    const savedChat = loadChatFromStorage(currentTimestamp)
-    setChat(savedChat)
+    // Always restore Q&A chat history from localStorage for this schema
+    const savedQAChat = loadQAChatFromStorage(currentTimestamp)
+    setQaChat(savedQAChat)
   }, [schema?.timestamp]) // Only run when timestamp changes (new schema)
   
-  // Restore explanation and chat when component mounts with existing schema
+  // Restore explanation and Q&A chat when component mounts with existing schema
   useEffect(() => {
     if (!schema) return
     
@@ -131,26 +125,26 @@ export default function ExportPanel({ schema, onSchemaChange, projectId }: Expor
       setIsExplaining(false)
     }
     
-    // If chat is empty but we have saved chat, restore it
-    if (chat.length === 0) {
-      const savedChat = loadChatFromStorage(currentTimestamp)
-      if (savedChat.length > 0) {
-        setChat(savedChat)
+    // If Q&A chat is empty but we have saved chat, restore it
+    if (qaChat.length === 0) {
+      const savedQAChat = loadQAChatFromStorage(currentTimestamp)
+      if (savedQAChat.length > 0) {
+        setQaChat(savedQAChat)
       }
     }
   }, [schema]) // Run whenever schema object changes (including on mount)
   
-  // Save chat to localStorage whenever it changes
+  // Save Q&A chat to localStorage whenever it changes
   useEffect(() => {
-    if (schema?.timestamp && chat.length > 0) {
-      saveChatToStorage(schema.timestamp, chat)
+    if (schema?.timestamp && qaChat.length > 0) {
+      saveQAChatToStorage(schema.timestamp, qaChat)
     }
-  }, [chat, schema?.timestamp])
+  }, [qaChat, schema?.timestamp])
 
   useEffect(() => {
-    if (!listRef.current) return
-    listRef.current.scrollTop = listRef.current.scrollHeight
-  }, [chat])
+    if (!qaListRef.current) return
+    qaListRef.current.scrollTop = qaListRef.current.scrollHeight
+  }, [qaChat])
 
   if (!schema) {
     return (
@@ -164,127 +158,38 @@ export default function ExportPanel({ schema, onSchemaChange, projectId }: Expor
     )
   }
 
-  const handleSend = async () => {
+  // Read-only Q&A chat handler (only answers questions, no schema modifications)
+  const handleQASend = async () => {
     if (!schema) return
-    const content = message.trim()
+    const content = qaMessage.trim()
     if (!content) return
     const userMessage = content
-    setMessage("")
-    const newChatWithUser = [...chat, { role: "user" as const, content: userMessage }]
-    setChat(newChatWithUser)
+    setQaMessage("")
+    const newChatWithUser = [...qaChat, { role: "user" as const, content: userMessage }]
+    setQaChat(newChatWithUser)
     
     try {
-      setIsSending(true)
+      setIsSendingQA(true)
       const res = await fetch("/api/schema-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           schema, 
           message: userMessage,
-          chatHistory: chat.map(m => ({ role: m.role, content: m.content }))
+          chatHistory: qaChat.map(m => ({ role: m.role, content: m.content }))
         }),
       })
       if (!res.ok) throw new Error("Failed to send message")
       const data = await res.json()
       if (data.reply) {
-        setChat((c) => [...c, { role: "assistant", content: data.reply }])
+        setQaChat((c) => [...c, { role: "assistant", content: data.reply }])
       }
-      if (data.updatedSchema && canEdit) {
-        // Show confirmation dialog before applying changes
-        setPendingSchema(data.updatedSchema)
-        setShowConfirmDialog(true)
-      }
+      // Ignore updatedSchema in read-only mode - this chat is only for questions
     } catch (e) {
-      setChat((c) => [...c, { role: "assistant", content: "Sorry, I couldn't process that request. Please try again." }])
+      setQaChat((c) => [...c, { role: "assistant", content: "Sorry, I couldn't process that request. Please try again." }])
     } finally {
-      setIsSending(false)
+      setIsSendingQA(false)
     }
-  }
-
-  const handleConfirmSchemaChange = async () => {
-    if (!pendingSchema || !onSchemaChange) {
-      setShowConfirmDialog(false)
-      setPendingSchema(null)
-      return
-    }
-
-    // If projectId is available, save to MongoDB
-    if (projectId) {
-      setIsSaving(true)
-      try {
-        // Generate all code formats for the updated schema
-        const codeFormats = generateAllCodeFormats(pendingSchema)
-
-        // Update the schema timestamp
-        const updatedSchema = {
-          ...pendingSchema,
-          timestamp: new Date().toISOString(),
-        }
-
-        // Save to MongoDB
-        const response = await fetch(`/api/projects/${projectId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            schema: updatedSchema,
-            explanation: updatedSchema.explanation || schema?.explanation || null,
-            codeFormats,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to save schema changes to database")
-        }
-
-        // Update local schema state
-        onSchemaChange(updatedSchema)
-
-        // Show success notification
-        toast.success("Schema Updated Successfully!", {
-          description: "Your schema changes have been saved to the database.",
-          icon: <CheckCircle2 className="w-5 h-5" />,
-          duration: 5000,
-        })
-
-        setChat((c) => [...c, { 
-          role: "assistant", 
-          content: "✅ Schema changes have been applied and saved to your project!" 
-        }])
-      } catch (error) {
-        console.error("Failed to save schema changes:", error)
-        toast.error("Failed to Save Changes", {
-          description: error instanceof Error ? error.message : "Could not save schema changes to database.",
-          duration: 5000,
-        })
-        setChat((c) => [...c, { 
-          role: "assistant", 
-          content: "❌ Failed to save schema changes to database. The changes were applied locally but not saved." 
-        }])
-      } finally {
-        setIsSaving(false)
-      }
-    } else {
-      // No projectId, just update local state
-      onSchemaChange(pendingSchema)
-      setChat((c) => [...c, { 
-        role: "assistant", 
-        content: "✅ Schema changes have been applied successfully!" 
-      }])
-    }
-
-    setShowConfirmDialog(false)
-    setPendingSchema(null)
-  }
-
-  const handleCancelSchemaChange = () => {
-    setShowConfirmDialog(false)
-    setPendingSchema(null)
-    setChat((c) => [...c, { 
-      role: "assistant", 
-      content: "Schema changes were cancelled. You can continue asking questions or request different changes." 
-    }])
   }
 
   return (
@@ -335,18 +240,18 @@ export default function ExportPanel({ schema, onSchemaChange, projectId }: Expor
         </CardContent>
       </Card>
 
-      {/* Chat Section */}
+      {/* Q&A Chat Section (Read-only, for answering doubts) */}
       <Card>
         <CardHeader>
-          <CardTitle>Ask Questions & Modify Schema</CardTitle>
-         
+          <CardTitle>Ask Questions</CardTitle>
+          <CardDescription>Get answers about your schema design and architecture decisions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div ref={listRef} className="h-64 overflow-y-auto rounded-md border border-border p-4 space-y-4 bg-muted/30">
-            {chat.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ask a question or request a change to the schema.</p>
+          <div ref={qaListRef} className="h-64 overflow-y-auto rounded-md border border-border p-4 space-y-4 bg-muted/30">
+            {qaChat.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ask questions about your schema design, relationships, or architecture decisions.</p>
             ) : (
-              chat.map((m, i) => (
+              qaChat.map((m, i) => (
                 <div 
                   key={i} 
                   className={`flex flex-col gap-1 ${
@@ -372,53 +277,26 @@ export default function ExportPanel({ schema, onSchemaChange, projectId }: Expor
           <div className="flex gap-2">
             <Textarea
               className="flex-1 min-h-[60px] resize-none"
-              placeholder="Ask a question or propose a change (e.g., 'Why is this relationship modeled this way?' or 'Add an email column to the users table')"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Ask a question about your schema (e.g., 'Why is this relationship modeled this way?' or 'What database was recommended and why?')"
+              value={qaMessage}
+              onChange={(e) => setQaMessage(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault()
-                  handleSend()
+                  handleQASend()
                 }
               }}
               rows={2}
             />
-            <Button onClick={handleSend} disabled={isSending || !message.trim()}>
-              {isSending ? "Sending..." : "Send"}
+            <Button onClick={handleQASend} disabled={isSendingQA || !qaMessage.trim()}>
+              {isSendingQA ? "Sending..." : "Send"}
             </Button>
           </div>
-          {!canEdit && (
-            <p className="text-xs text-muted-foreground">Note: Updates are view-only here. Open this panel from the main page to enable live schema updates.</p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            💡 This chat is for answering questions only. To modify your schema, use the chat in the Scripts section.
+          </p>
         </CardContent>
       </Card>
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apply Schema Changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The assistant has suggested changes to your schema. Would you like to apply these changes? This will update your current schema and may affect the ER diagram and generated scripts.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelSchemaChange} disabled={isSaving}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSchemaChange} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Apply Changes"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 5) Be conversational and helpful - this is a one-on-one discussion to resolve doubts.
 
 Current Schema:
-${tablesSummary}${explanationContext}${conversationHistory}
+${tablesSummary}${explanationContext}${originalDescription}${conversationHistory}
 
 Current User Message:
 ${message}
@@ -104,6 +104,11 @@ Important: Only suggest schema updates when the user explicitly requests changes
     // Include explanation context if available
     const explanationContext = schema.explanation
       ? `\n\nSchema Explanation & Rationale:\n${schema.explanation}`
+      : ""
+
+    // Include original description/requirements
+    const originalDescription = schema.description
+      ? `\n\nOriginal Requirements:\n${schema.description}`
       : ""
 
     const conversationHistory = chatHistory.length > 0

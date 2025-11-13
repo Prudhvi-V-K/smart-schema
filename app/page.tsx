@@ -149,7 +149,7 @@ export default function Home() {
                 />
               )}
               {activeTab === "diagram" && <ERDiagram schema={schema} />}
-              {activeTab === "scripts" && <ScriptsBuilder schema={schema} projectId={selectedProjectId} />}
+              {activeTab === "scripts" && <ScriptsBuilder schema={schema} projectId={selectedProjectId} onSchemaChange={setSchema} />}
               {activeTab === "export" && schema && (
                 <ExportPanel schema={schema} onSchemaChange={setSchema} projectId={selectedProjectId} />
               )}
