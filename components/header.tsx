@@ -2,14 +2,12 @@
 
 import { Zap } from "lucide-react"
 import { Orbitron } from "next/font/google"
-import { UserButton } from "@clerk/nextjs"
-import { useUser } from "@clerk/nextjs"
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
+import { Button } from "@/components/ui/button"
 
 const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "700"] })
 
 export default function Header() {
- 
-
   return (
     <header className="border-b border-border bg-card h-16 flex items-center justify-between px-6 gap-3">
       <div className="flex items-center gap-3">
@@ -18,7 +16,18 @@ export default function Header() {
           SmartSchema: AI-Powered Database Design Assistant
         </h1>
       </div>
-     
+      <div className="flex items-center gap-3">
+        <SignedOut>
+          <SignInButton mode="modal">
+            <Button variant="outline" size="sm">
+              Sign in
+            </Button>
+          </SignInButton>
+        </SignedOut>
+        <SignedIn>
+          <UserButton afterSignOutUrl="/sign-in" />
+        </SignedIn>
+      </div>
     </header>
   )
 }

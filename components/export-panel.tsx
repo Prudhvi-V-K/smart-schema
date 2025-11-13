@@ -220,21 +220,48 @@ export default function ExportPanel({ schema, onSchemaChange }: ExportPanelProps
   return (
     <div className="p-6 space-y-6">
       {/* Explanation Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Architecture Recommendation & Rationale</CardTitle>
-          <CardDescription>
+      <Card className="border-2 shadow-lg bg-gradient-to-br from-background to-muted/20">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <span className="text-2xl">📊</span>
+            <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text font-semibold">
+              Architecture Recommendation & Rationale
+            </span>
+          </CardTitle>
+          <CardDescription className="text-base">
             Suitable database choice for your project and why the relationships are modeled this way
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="prose prose-invert dark:prose-invert max-w-none text-sm">
-            {isExplaining ? (
-              <p className="text-muted-foreground">Generating explanation...</p>
-            ) : (
+          {isExplaining ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="text-muted-foreground">Generating explanation...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="prose prose-slate dark:prose-invert max-w-none 
+              prose-headings:font-semibold prose-headings:text-foreground
+              prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6 prose-h1:border-b prose-h1:border-border prose-h1:pb-2
+              prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5 prose-h2:text-primary
+              prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4
+              prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-4
+              prose-strong:text-foreground prose-strong:font-semibold
+              prose-ul:list-disc prose-ul:pl-6 prose-ul:my-4
+              prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-4
+              prose-li:text-foreground prose-li:my-2 prose-li:leading-relaxed
+              prose-code:text-sm prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-primary
+              prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto
+              prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-muted-foreground prose-blockquote:my-4
+              prose-a:text-primary prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-primary/80
+              prose-table:w-full prose-table:my-4 prose-table:border-collapse
+              prose-th:border prose-th:border-border prose-th:bg-muted prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold
+              prose-td:border prose-td:border-border prose-td:px-4 prose-td:py-2
+              text-sm">
               <ReactMarkdown>{explanation}</ReactMarkdown>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

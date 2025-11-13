@@ -15,11 +15,11 @@ export default function ERDiagram({ schema }: ERDiagramProps) {
       return null
     }
 
-    const CARD_WIDTH = 320
-    const CARD_BASE_HEIGHT = 120
-    const ROW_HEIGHT_PER_COLUMN = 40
-    const HORIZONTAL_GAP = 120
-    const VERTICAL_GAP = 120
+    const CARD_WIDTH = 240
+    const CARD_BASE_HEIGHT = 80
+    const ROW_HEIGHT_PER_COLUMN = 28
+    const HORIZONTAL_GAP = 80
+    const VERTICAL_GAP = 80
     const tablesPerRow = Math.max(1, Math.ceil(Math.sqrt(schema.tables.length)))
 
     const preliminary: Array<{
@@ -153,14 +153,14 @@ export default function ERDiagram({ schema }: ERDiagramProps) {
                 <defs>
                   <marker
                     id="arrow"
-                    markerWidth="8"
-                    markerHeight="8"
-                    refX="6"
-                    refY="4"
+                    markerWidth="6"
+                    markerHeight="6"
+                    refX="5"
+                    refY="3"
                     orient="auto"
                     markerUnits="strokeWidth"
                   >
-                    <path d="M0,0 L8,4 L0,8 z" fill="hsl(var(--accent))" />
+                    <path d="M0,0 L6,3 L0,6 z" fill="hsl(var(--accent))" />
                   </marker>
                 </defs>
                 {connections.map((connection, idx) => {
@@ -181,16 +181,16 @@ export default function ERDiagram({ schema }: ERDiagramProps) {
                       <path
                         d={path}
                         stroke="hsl(var(--accent))"
-                        strokeWidth={2}
+                        strokeWidth={1.5}
                         fill="none"
                         markerEnd="url(#arrow)"
-                        strokeDasharray="6 4"
+                        strokeDasharray="4 3"
                       />
                       <text
                         x={(startX + endX) / 2}
-                        y={(startY + endY) / 2 - 6}
+                        y={(startY + endY) / 2 - 4}
                         textAnchor="middle"
-                        className="fill-accent text-[10px]"
+                        className="fill-accent text-[9px]"
                       >
                         {connection.label}
                       </text>
@@ -214,41 +214,41 @@ export default function ERDiagram({ schema }: ERDiagramProps) {
                       }}
                     >
                       {/* Table Header */}
-                      <div className="bg-primary text-primary-foreground p-3 flex items-center gap-2">
-                        <Database className="w-4 h-4" />
-                        <h3 className="font-semibold text-sm">{table.name}</h3>
+                      <div className="bg-primary text-primary-foreground px-2.5 py-1.5 flex items-center gap-1.5">
+                        <Database className="w-3 h-3" />
+                        <h3 className="font-semibold text-xs">{table.name}</h3>
                       </div>
 
                       {/* Columns */}
                       <div className="divide-y divide-border">
                         {table.columns.length === 0 ? (
-                          <div className="p-3 text-xs text-muted-foreground text-center">No columns</div>
+                          <div className="p-2 text-[10px] text-muted-foreground text-center">No columns</div>
                         ) : (
                           table.columns.map((column) => (
-                            <div key={column.id} className="p-2 text-xs hover:bg-muted transition-colors">
-                              <div className="flex items-center gap-2 justify-between">
-                                <div className="flex-1">
+                            <div key={column.id} className="px-2 py-1.5 text-[10px] hover:bg-muted transition-colors">
+                              <div className="flex items-center gap-1 justify-between">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1 flex-wrap">
                                     {column.isPrimaryKey && (
-                                      <span className="font-bold text-primary" title="Primary Key">
+                                      <span className="font-bold text-primary text-[9px]" title="Primary Key">
                                         🔑
                                       </span>
                                     )}
                                     {column.isForeignKey && (
                                       <span
-                                        className="font-bold text-accent"
+                                        className="font-bold text-accent text-[9px]"
                                         title={`Foreign key to ${column.foreignKeyTable}`}
                                       >
                                         🔗
                                       </span>
                                     )}
-                                    <span className="font-mono font-semibold text-foreground">{column.name}</span>
+                                    <span className="font-mono font-semibold text-foreground truncate">{column.name}</span>
                                   </div>
-                                  <div className="text-muted-foreground mt-1">
-                                    {column.type}
-                                    {column.nullable && <span className="ml-1 opacity-60">(null)</span>}
+                                  <div className="text-muted-foreground mt-0.5 text-[9px]">
+                                    <span className="truncate block">{column.type}</span>
+                                    {column.nullable && <span className="opacity-60">(null)</span>}
                                     {column.isForeignKey && column.foreignKeyTable && (
-                                      <div className="text-accent mt-1">→ {column.foreignKeyTable}</div>
+                                      <div className="text-accent mt-0.5 truncate">→ {column.foreignKeyTable}</div>
                                     )}
                                   </div>
                                 </div>

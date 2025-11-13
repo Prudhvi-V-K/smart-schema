@@ -45,9 +45,12 @@ npm install
 Create a `.env.local` file in the root directory with the following variables:
 
 ```env
+
 # Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
 CLERK_SECRET_KEY=your_clerk_secret_key_here
+CLERK_SIGN_IN_URL=/sign-in
+CLERK_SIGN_UP_URL=/sign-up
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/smart_schema?schema=public
@@ -55,15 +58,16 @@ DATABASE_URL=postgresql://user:password@localhost:5432/smart_schema?schema=publi
 # AI Provider
 AI_PROVIDER=gemini
 AI_API_KEY=your_google_gemini_api_key_here
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: Your Clerk publishable key (get from Clerk dashboard)
 - `CLERK_SECRET_KEY`: Your Clerk secret key (get from Clerk dashboard)
+- `CLERK_SIGN_IN_URL` / `CLERK_SIGN_UP_URL`: The routes Clerk should use for hosted authentication pages
 - `DATABASE_URL`: Your PostgreSQL database connection URL
 - `AI_PROVIDER`: The AI provider to use (currently supports `gemini`)
 - `AI_API_KEY`: Your Google Gemini API key (get from [Google AI Studio](https://makersuite.google.com/app/apikey))
-- `GEMINI_MODEL`: The Gemini model to use (optional, defaults to `gemini-1.5-flash`)
+- `GEMINI_MODEL`: The Gemini model to use (optional, defaults to `gemini-2.0-flash`)
 
 ### 5. Set up the Database
 

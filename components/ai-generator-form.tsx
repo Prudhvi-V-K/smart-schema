@@ -4,8 +4,9 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Wand2, Loader2, Sparkles, Database } from "lucide-react"
+import { Wand2, Loader2, Sparkles, Database, CheckCircle2 } from "lucide-react"
 import { Orbitron } from "next/font/google"
+import { toast } from "sonner"
 import type { GeneratedSchema } from "@/app/page"
 
 const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "600", "700"] })
@@ -54,10 +55,25 @@ export default function AIGeneratorForm({ onSchemaGenerated, isLoading, setIsLoa
 
       const generatedSchema = await response.json()
       console.log("[v0] Schema generated successfully:", generatedSchema)
+      
+      // Show success notification
+      toast.success("Schema Generated Successfully!", {
+        description: `Your database schema with ${generatedSchema.tables?.length || 0} table(s) has been created and saved.`,
+        icon: <CheckCircle2 className="w-5 h-5" />,
+        duration: 5000,
+      })
+      
       onSchemaGenerated(generatedSchema)
     } catch (err) {
       console.error("[v0] Schema generation error:", err)
-      setError(err instanceof Error ? err.message : "Failed to generate schema")
+      const errorMessage = err instanceof Error ? err.message : "Failed to generate schema"
+      setError(errorMessage)
+      
+      // Show error notification
+      toast.error("Schema Generation Failed", {
+        description: errorMessage,
+        duration: 5000,
+      })
     } finally {
       setIsLoading(false)
     }
