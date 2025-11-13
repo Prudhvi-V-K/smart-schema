@@ -15,14 +15,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import ReactMarkdown from "react-markdown"
+import { generateAllCodeFormats } from "@/lib/code-generator"
+import { toast } from "sonner"
+import { CheckCircle2, Loader2 } from "lucide-react"
 import type { GeneratedSchema } from "@/app/page"
 
 interface ExportPanelProps {
   schema: GeneratedSchema | null
   onSchemaChange?: (schema: GeneratedSchema) => void
+  projectId?: string | null
 }
 
-export default function ExportPanel({ schema, onSchemaChange }: ExportPanelProps) {
+export default function ExportPanel({ schema, onSchemaChange, projectId }: ExportPanelProps) {
   const [explanation, setExplanation] = useState<string>("")
   const [isExplaining, setIsExplaining] = useState(false)
   const [message, setMessage] = useState("")
@@ -30,6 +34,7 @@ export default function ExportPanel({ schema, onSchemaChange }: ExportPanelProps
   const [isSending, setIsSending] = useState(false)
   const [pendingSchema, setPendingSchema] = useState<GeneratedSchema | null>(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
 
   const canEdit = typeof onSchemaChange === "function"
@@ -196,14 +201,79 @@ export default function ExportPanel({ schema, onSchemaChange }: ExportPanelProps
     }
   }
 
-  const handleConfirmSchemaChange = () => {
-    if (pendingSchema && onSchemaChange) {
+  const handleConfirmSchemaChange = async () => {
+    if (!pendingSchema || !onSchemaChange) {
+      setShowConfirmDialog(false)
+      setPendingSchema(null)
+      return
+    }
+
+    // If projectId is available, save to MongoDB
+    if (projectId) {
+      setIsSaving(true)
+      try {
+        // Generate all code formats for the updated schema
+        const codeFormats = generateAllCodeFormats(pendingSchema)
+
+        // Update the schema timestamp
+        const updatedSchema = {
+          ...pendingSchema,
+          timestamp: new Date().toISOString(),
+        }
+
+        // Save to MongoDB
+        const response = await fetch(`/api/projects/${projectId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            schema: updatedSchema,
+            explanation: updatedSchema.explanation || schema?.explanation || null,
+            codeFormats,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to save schema changes to database")
+        }
+
+        // Update local schema state
+        onSchemaChange(updatedSchema)
+
+        // Show success notification
+        toast.success("Schema Updated Successfully!", {
+          description: "Your schema changes have been saved to the database.",
+          icon: <CheckCircle2 className="w-5 h-5" />,
+          duration: 5000,
+        })
+
+        setChat((c) => [...c, { 
+          role: "assistant", 
+          content: "✅ Schema changes have been applied and saved to your project!" 
+        }])
+      } catch (error) {
+        console.error("Failed to save schema changes:", error)
+        toast.error("Failed to Save Changes", {
+          description: error instanceof Error ? error.message : "Could not save schema changes to database.",
+          duration: 5000,
+        })
+        setChat((c) => [...c, { 
+          role: "assistant", 
+          content: "❌ Failed to save schema changes to database. The changes were applied locally but not saved." 
+        }])
+      } finally {
+        setIsSaving(false)
+      }
+    } else {
+      // No projectId, just update local state
       onSchemaChange(pendingSchema)
       setChat((c) => [...c, { 
         role: "assistant", 
         content: "✅ Schema changes have been applied successfully!" 
       }])
     }
+
     setShowConfirmDialog(false)
     setPendingSchema(null)
   }
@@ -333,8 +403,19 @@ export default function ExportPanel({ schema, onSchemaChange }: ExportPanelProps
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelSchemaChange}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSchemaChange}>Apply Changes</AlertDialogAction>
+            <AlertDialogCancel onClick={handleCancelSchemaChange} disabled={isSaving}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSchemaChange} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Apply Changes"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
